@@ -24,7 +24,7 @@ Yes we can! Ethereum's precompiled contracts are deployed at address(0), addres(
 As we want the return data to start with isValidSignature.selector = 0x1626ba7e, we need to find a signature such as SHA256(0x1626ba7e + hash(CHALLENGE_MAGIC) + signature) = 0x1626ba7eXXXXXX..
 
 To do this, we've written a rust bruteforce algorithm, see ./rust-vanity-finder. 
-Our algorithm is able to find a solution in less than 30 minutes (--release!)
+Our algorithm is able to find a solution in less than 30 minutes (--release!) on a classic computer.
 A solution is 003f7f000000000000000000000000000000000000000000000000000051f1441a.
 We now just have to inject this code using Yul - cf `solution.sol`.
 
