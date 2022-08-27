@@ -2,7 +2,7 @@
 
 For this challenge, the idea is simple: be able to sign a message from an address having more than 16 zeros, or to send a transaction with such an account.
 It is not possible to do the latter, and it seems hard to do the former aswell.
-Indeed, the library used to handle signature is an old OpenZeppelin release, the only difference between the most recent one being the possibility to submit both 65 bytes and 64 bytes signatures. While this possibility allows signature malleability attacks, it doesn't seem possible to leverage that to solve the challenge are the signatures are only used once.
+Indeed, the library used to handle signature is an old OpenZeppelin release, the only difference between the most recent one being the possibility to submit both 65 bytes and 64 bytes signatures. While this possibility allows signature malleability attacks, it doesn't seem possible to leverage that to solve the challenge as the signatures are only used once.
 So where is the bug?
 
 Let's dive into `SignatureCheck.sol`.
