@@ -3,14 +3,20 @@ from pathlib import Path
 from termcolor import colored
 from web3 import Web3
 
+step_counter: int = 1
 
-def next_step():
-    input(colored("  Press any key to go to the next step.\n", "grey"))
+
+def next_step(title: str) -> None:
+    global step_counter
+    if step_counter != 1:
+        input(colored("  Press Enter to go to the next step.\n", "grey"))
+    print(colored("STEP %d - %s" % (step_counter, title), "yellow"))
+    step_counter += 1
 
 
 tree = json.load(open(Path(__file__).parent / "data" / "tree.json", "r"))
 
-print(colored("STEP 1 - Find all the unwanted valid data", "yellow"))
+next_step("Find all the unwanted valid data")
 
 unwanted_valid_data = []
 
@@ -33,23 +39,21 @@ for height in range(max_path_length):
 
 print("  %d unwanted valid data found." % len(unwanted_valid_data))
 
-next_step()
-print(colored("STEP 2 - Find a data with a decent claim amount", "yellow"))
+next_step("Find a data with a decent claim amount")
 
 max_claim_amount = 75 * 10**21
 claimable_unwanted_data = []
 
 for data in unwanted_valid_data:
-    amount = int(data[2 + (32 + 20) * 2 :], 16)
+    amount = int(data[2 + (32 + 20) * 2:], 16)
     if amount <= max_claim_amount:
         claimable_unwanted_data.append((data, amount))
 
 print("  %d unwanted claimable data found." % len(claimable_unwanted_data))
 
-next_step()
-print(colored("STEP 3 - Find an user that can claim the remaining amount", "yellow"))
+next_step("Find an user that can claim the remaining amount")
 
-remaining_amount = max_claim_amount - claimable_unwanted_data[0][1]
+remaining_amount: int = max_claim_amount - claimable_unwanted_data[0][1]
 
 for address in tree["claims"]:
     if int(tree["claims"][address]["amount"], 16) == remaining_amount:
@@ -59,8 +63,7 @@ for address in tree["claims"]:
         print("  An user can claim the remaining amount.")
         break
 
-next_step()
-print(colored("STEP 4 - Build the solution", "yellow"))
+next_step("Build the solution")
 
 
 def get_proof(data):
@@ -68,12 +71,14 @@ def get_proof(data):
     proof = []
     for height in range(max_path_length):
         for h2 in hashes_by_height[height]:
-            keccak = Web3.soliditySha3(["bytes32", "bytes32"], [hash, h2]).hex()
+            keccak = Web3.soliditySha3(
+                ["bytes32", "bytes32"], [hash, h2]).hex()
             if keccak in hashes_by_height[height + 1]:
                 proof.append(h2)
                 hash = keccak
                 break
-            keccak = Web3.soliditySha3(["bytes32", "bytes32"], [h2, hash]).hex()
+            keccak = Web3.soliditySha3(
+                ["bytes32", "bytes32"], [h2, hash]).hex()
             if keccak in hashes_by_height[height + 1]:
                 proof.append(h2)
                 hash = keccak
@@ -82,13 +87,14 @@ def get_proof(data):
 
 
 unwanted_claim = {
-    "index": int(claimable_unwanted_data[0][0][2 : 2 + 32 * 2], 16),
+    "index": int(claimable_unwanted_data[0][0][2: 2 + 32 * 2], 16),
     "account": Web3.toChecksumAddress(
-        claimable_unwanted_data[0][0][2 + 32 * 2 : 2 + (32 + 20) * 2]
+        claimable_unwanted_data[0][0][2 + 32 * 2: 2 + (32 + 20) * 2]
     ),
     "amount": claimable_unwanted_data[0][1],
     "proof": get_proof(claimable_unwanted_data[0][0]),
 }
 
-print("  Unwanted claim: " + str(json.dumps(unwanted_claim, indent=4, sort_keys=True)))
+print("  Unwanted claim: " +
+      str(json.dumps(unwanted_claim, indent=4, sort_keys=True)))
 print("  User claim: " + str(json.dumps(user_claim, indent=4, sort_keys=True)))
