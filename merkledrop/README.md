@@ -1,12 +1,12 @@
 # Merkledrop 
 
-This challenge implements a contract where the users can claim a quantity of a token that has been allocated to them. To do so, a [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree) has been used. A Merkle tree allows to store a lot of information in a single viariable with a known size: the Merkle root.
+This challenge implements a contract in which the users can claim a quantity of a token that has been allocated to them. To do so, a [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree) is used. A Merkle tree allows to store a lot of information in a single viariable with a known size: the Merkle root.
 
-In the contact `MerkleDistributor`, one can claim an, amount of token for an address by calling the function `claim` with the corresponding proof, a `bytes32[]` variable called `merkleProof`. All the 64 allowed claims with the corresponding proofs are given in a [`tree.json`](data/tree.json) file. Each allowed claim has an index that prevents prople claiming two times their tokens. 
+In the contact `MerkleDistributor`, one can claim an amount of token for an address by calling the function `claim` with the corresponding proof, a `bytes32[]` variable called `merkleProof`. All the 64 allowed claims with the corresponding proofs are given in a [`tree.json`](data/tree.json) file. Each allowed claim has an index that prevents prople claiming two times their tokens. 
 
 A total of $75.10^{21}$ tokens are given to the contract, and in the standard case, all of this amount should be distributed to the 64 users. The objective of the challenge is to create an unwanted claim : all the tokens from the distributor should be gone, but at least one of the 64 users must not have claimed their tokens.
 
-A well-known attack on Merkle trees is the "second preimage attack", and it is what we will use here. The idea is that not only the leaves have a valid proof, but also all the inner nodes of the Merkle tree. These inner nodes create unwanted valid data. The first step of the Python script [`solution-finder.py`](solution-finder.py) finds all of these data.
+A well-known attack on Merkle trees is the "second preimage attack", and it is what we will use here. The idea is that not only the leaves have a valid proof, but also all the inner nodes of the Merkle tree. These inner nodes create unwanted valid data. The first step of the Python script [`solution-finder.py`](solution-finder.py) is to find all of these data.
 
 Now we want to know if we can exploit one of these data (it is not guaranteed in general). So let's see how the user input are verified. 
 
