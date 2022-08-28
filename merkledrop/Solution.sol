@@ -12,7 +12,7 @@ interface IMerkleDistributor {
 }
 
 interface ISetup {
-    function merkleDistributor() external returns (IMerkleDistributor);
+    function merkleDistributor() external view returns (IMerkleDistributor);
 }
 
 contract Solution {
