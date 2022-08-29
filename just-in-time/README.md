@@ -34,16 +34,30 @@ In addition to these opcodes, there are pseudo-opcodes. They do not provide more
 
 For example, `A000c` (encoded `41000c`) is equivalent to `++++++++++++` (encoded `2b2b2b2b2b2b2b2b2b2b2b2b`). These pseudo-opcodes are used during the pre-processing, before the compilation, to optimize duplications of opcodes and `[-]` loops (replaced by `0##`). For example, `>>>>>>>` (encoded `3e3e3e3e3e3e3e`) is replaced by `R0007####` (encoded `52000723232323`). It is not clear if it is intentional, but we can use these pseudo-opcodes in the input program.
 
+### Invalid opcodes
+
+If an invalid opcode is given in the input program (not in the opcodes and pseudo-opcodes listed above), it will be added as it in the output EVM bytecode, but it will be preceded by the opcodes `dead` and succeded by the opcodes `beef`, that are only invalid EVM opcodes.
+
 ## Presentation of some unexpected behaviors of the compiler
 
-The compiler presents some unexpected behaviors (and the author apologizes for this in the comments of the contract). We list here all the ones we found, but not all of them we be used in our solution.
+The compiler presents some unexpected behaviors (and the author apologizes for this in the comments of the contract). We list here all the ones we found, but not all of them will be used in our solution.
 
-### Pseudo-opcodes don't escape the following characters
+### 1. Pseudo-opcodes don't escape the following characters
 
 The four pseudo-opcodes `R`, `L`, `A` and `S` read during the compilation the two following bytes to determine the number of repetitions. But these two bytes are considered as normal input opcodes during the pre-processing, especially during the loop detection. So, if for example there is in the input programe the opcodes `A005b` (encoded `41005b`) to add 91 to the last elemtn on the stack, it will be interpreted as `A00[` (because `[` is encoded by `5b`) during the pre-processing. So, during the loop detection, it will consider that there is here the begining of a new loop. It can make the transaction revert (it can happen if all the brackets are not matched), or worse, add unexpected loops in the code.
 
-### The optimization pass doesn't replace the correct number of opcodes
+### 2. The optimization pass doesn't replace the correct number of opcodes
 
 To optimize the duplications of characters, the optimization pass replaces them by pseudo-opcodes. To avoid reindexing the opcodes in the list, the difference of opcodes are replaced by `#` (the opcodes that does nothing). For example, `++++++++++++` is replaced by `A000c#########`. But, the number of opcodes to replace is miscomputed. Indeed, in a series of several identical opcodes, the opcodes `#` are ignored (because `+++###+++-` is equivalent `++++++`), but the number of ignored opcodes is not computed. So, `+++###+++-` wil be replaced by `+++A0006###-` instead of `A0006######-`. Note that here the final `-` is necessary because the compiler doesn't replace a repetition of opcodes if it is at the end of the input program (another unexpected behaviour but without any repercussion). Eventually, 9 will be added istead of 6. In the general case, it will execute more time that expective the action.
+
+### 3. Invalid opcodes can badly influence the output code
+
+In theory, the invalid input opcodes are not accessible by any means because they are surrounded by invalid EVM opcodes. Indeed, if the program counter should naturally arrive to the invalud input opcode, the transaction will revert because it is preceeded by invalid EVM opcodes. We also can't jump on them because it needs a JUMPDEST opcode, that is `5b`, the encoding of `[`, a valid input opcode. But, if we put a PUSHN opcode with N > 2, it will escape opcodes that are further. Indeed, the N bytes following a PUSHN are escaped, in the sense that they can't be executed as actual opcodes. So, any PUSHN with N > 2 in the input program can lead to unexpected behaviours.
+
+### 4. There is no check that all the opened brackets are closed
+
+### 5. Not all the storage variables is cleaned after an execution
+
+Almost all the storage variables are cleaned when they are no more used, in order to reset them for the next execution. But two variables are not reset: the mappings `loops` and `basicBlockAddrs` (because they are mapping, so it is impossible to reset them, the keyword `delete` doesn't work on mappings). So, these two mappings will keep their values of the end of the execution in a later execution.
 
 ## Building the solution
