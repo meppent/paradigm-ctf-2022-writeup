@@ -71,7 +71,7 @@ Almost all the storage variables are cleaned when they are no more used, in orde
 
 ## Building the solution
 
-Since the contract makes a `delegatecall` to the deployed contract, the objective is just to make the function `invoke` deploy a contract that sends its money to someone. But here's a problem: there is no input opcode that permits to make a `call`, the common way to send money to someone. Even worse, we don't interact freely with the stack, that has almost all the time a depth of 2. The opcode `CALL` needs 7 elements on the stack, so it seems impossible to make a `call`. But there is another opcode that transfers money: the opcode `SELFDESTRUCT` (`ff`). The advantages of this opcode are that it requires only one element on the stack, and that it transfers all the money the contract has, there is no need to precise the amount. So, our objective will be to make the compiler put the byte `ff` in the EVM bytecode, and to make this opcode accessible in a execution.
+Since the contract makes a `delegatecall` to the deployed contract, the objective is just to make the function `invoke` deploy a contract that sends its funds to someone. But here's a problem: there is no input opcode that permits to make a `call`, the common way to send ethers to someone. Even worse, we don't interact freely with the stack, that has almost all the time a depth of 2. The opcode `CALL` needs 7 elements on the stack, so it seems impossible to make a `call`. But there is another opcode that transfers ethers: the opcode `SELFDESTRUCT` (`ff`). The advantages of this opcode are that it requires only one element on the stack, and that it transfers all the funds the contract has, there is no need to precise the amount. So, our objective will be to make the compiler put the byte `ff` in the EVM bytecode, and to make this opcode accessible in a execution.
 
 But `ff` is not a valid input opcode, and there are only two ways to make the compiler write this opcode in the output EVM bytecode:
 - Put it as it, it will be treated as an invalid opcode so surrounded by invalid opcodes, but it will be inaccessible.
@@ -149,4 +149,4 @@ And it deploys the bytecode:
 0x60006180005b5b5b5b5b5b5b8051630000001a57630000004a565bdead64beef8051615bff0181525b80516300000037576300000043565bdeadffbeef6300000028565b630000000b565b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b80516300000068576300000038565b5b5b5b5b5b5b5b00
 ```
 
-By executing the two transactions in a row, the contract will selfdestruct and send all of his money, the 50 ethers, to some address. We can deploy [`Solution.sol`](Solution.sol) that solves the challenge at the deployment.
+By executing the two transactions in a row, the contract will selfdestruct and send all of his funds, the 50 ethers, to some address. We can deploy [`Solution.sol`](Solution.sol) that solves the challenge at the deployment.
