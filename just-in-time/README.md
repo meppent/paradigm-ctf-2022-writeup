@@ -2,9 +2,9 @@
 
 ## Explanation of the challenge
 
-This challenge implements a [just-in-time](https://en.wikipedia.org/wiki/Just-in-time_compilation) compiler written in Solidity. The contract `JIT` has a function `invoke` that takes two argument, `_program` and `stdin`, of type `bytes`. The first one is the input program written with custom opcodes that we will described later, that will be translated to EVM opcodes during the compilation. After the compilation, the function deploys a contract with the bytecode obtained by the compilation, and makes a `delegatecall` to the deployed contract with `_stdin` as input data.
+This challenge implements a [just-in-time](https://en.wikipedia.org/wiki/Just-in-time_compilation) compiler written in Solidity. The contract `JIT` has a function `invoke` that takes two argument, `_program` and `stdin`, of type `bytes`. The first one is the input program written with custom opcodes that we will describe later, that will be translated to EVM opcodes during the compilation. After the compilation, the function deploys a contract with the bytecode obtained by the compilation, and makes a `delegatecall` to the deployed contract with `_stdin` as input data.
 
-The objective of the challenge is to steal the 50 ethers that are given to the contract `JIT` at the begining.
+The objective of the challenge is to steal 50eth given to the contract `JIT` at the begining.
 
 ## Compiler description
 
@@ -21,7 +21,7 @@ The custom opcodes of the input program are given as bytes, that are the UTF-8 h
 > `]` Ends a loop.  
 > `#` Does nothing.  
 
-The loops are running while the item at the memory address that is the last item on the stack is not null. If this condition is not met at a `[` character, it will directly jump to the matching `]` character. For example, the program `[-]` will decrement the item in the memory until it is null.
+The loops are running while the item at the memory address that is the last item on the stack is not null. If this condition is not met at a `[` character, it will directly jump to the matching `]` character. For example, the program `[-]` will decrement the item in memory until it is null.
 
 ### Pseudo-opcodes
 
@@ -44,15 +44,15 @@ The compiler presents some unexpected behaviors (and the author apologizes for t
 
 ### 1. Pseudo-opcodes don't escape the following characters
 
-The four pseudo-opcodes `R`, `L`, `A` and `S` read during the compilation the two following bytes to determine the number of repetitions. But these two bytes are considered as normal input opcodes during the pre-processing, especially during the loop detection. So, if for example there is in the input programe the opcodes `A005b` (encoded `41005b`) to add 91 to the last elemtn on the stack, it will be interpreted as `A00[` (because `[` is encoded by `5b`) during the pre-processing. So, during the loop detection, it will consider that there is here the begining of a new loop. It can make the transaction revert (it can happen if all the square brackets are not matched), or worse, add unexpected loops in the code.
+The four pseudo-opcodes `R`, `L`, `A` and `S` read during the compilation the two following bytes to determine the number of repetitions. But these two bytes are considered as normal input opcodes during the pre-processing, especially during the loop detection. So, if for example there is in the input programe the opcodes `A005b` (encoded `41005b`) to add 91 to the last element on the stack, it will be interpreted as `A00[` (because `[` is encoded by `5b`) during the pre-processing. So, during the loop detection, it will consider that there is here the begining of a new loop. It can make the transaction revert (it can happen if all the square brackets are not matched), or worse, add unexpected loops in the code.
 
 ### 2. The optimization pass doesn't replace the correct number of opcodes
 
-To optimize the duplications of characters, the optimization pass replaces them by pseudo-opcodes. To avoid reindexing the opcodes in the list, the difference of opcodes are replaced by `#` (the input opcode that does nothing). For example, `++++++++++++` is replaced by `A000c#########`. But, the number of opcodes to replace is miscomputed. Indeed, in a series of several identical opcodes, the opcodes `#` are ignored (because `+++###+++-` is equivalent `++++++`), but the number of ignored opcodes is not computed. So, `+++###+++-` wil be replaced by `+++A0006###-` instead of `A0006######-`. Note that here the final `-` is necessary because the compiler doesn't replace a repetition of opcodes if it is at the end of the input program (another unexpected behaviour but without any repercussion). Eventually, here 9 will be added istead of 6. In the general case, it will execute more time that expected the action.
+To optimize duplications of characters, the optimization pass replaces them by pseudo-opcodes. To avoid reindexing the opcodes in the list, the difference of opcodes are replaced by `#` (the input opcode that does nothing). For example, `++++++++++++` is replaced by `A000c#########`. But, the number of opcodes to replace is miscomputed. Indeed, in a series of several identical opcodes, the opcodes `#` are ignored (because `+++###+++-` is equivalent `++++++`), but the number of ignored opcodes is not computed. So, `+++###+++-` wil be replaced by `+++A0006###-` instead of `A0006######-`. Note that here the final `-` is necessary because the compiler doesn't replace a repetition of opcodes if it is at the end of the input program (another unexpected behaviour but without any repercussion). Eventually, here 9 will be added istead of 6. In the general case, it will execute more time that expected the action.
 
 ### 3. Invalid opcodes can badly influence the output code
 
-In theory, the invalid input opcodes are not accessible by any means because they are surrounded by invalid EVM opcodes. Indeed, if the program counter should naturally arrive to the invalud input opcode, the transaction will revert because it is preceeded by invalid EVM opcodes. We also can't jump on them because it needs a `JUMPDEST` opcode, that is `5b`, the encoding of `[`, a valid input opcode. But, if we put a `PUSHN` opcode with $N > 2$, it will escape opcodes that are further. Indeed, the N bytes following a `PUSHN` are escaped, in the sense that they can't be executed as actual opcodes. So, any `PUSHN` with $N > 2$ in the input program can lead to unexpected behaviours.
+In theory, the invalid input opcodes are not accessible by any means because they are surrounded by invalid EVM opcodes. Indeed, if the program counter should naturally arrive to the invalid input opcode, the transaction will revert because it is preceeded by invalid EVM opcodes. We also can't jump on them because it needs a `JUMPDEST` opcode, that is `5b`, the encoding of `[`, a valid input opcode. But, if we put a `PUSHN` opcode with $N > 2$, it will escape opcodes that are further. Indeed, the N bytes following a `PUSHN` are escaped, in the sense that they can't be executed as actual opcodes. So, any `PUSHN` with $N > 2$ in the input program can lead to unexpected behaviours.
 
 ### 4. There is no check that all the opened square brackets are closed
 
