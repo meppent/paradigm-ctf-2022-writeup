@@ -26,4 +26,4 @@ Knowing that we have 5000 eth initially, the idea then becomes clear: we need to
 We do not really care about `minAmountOut` so we can set it to be 0 (we won't get sandwiched on a private blockchain heh). 
 
 The contract will swap the small amount of token B and add liquidity with the 10 wEth it has, and the great amount of token A we sent him. Knowing that the amount of token A is worth more than 10 eth, the action od adding liquidity will take all 10 eth of the contract and we are done! 
-See `solution.sol` for an actual implementation.
+See [`Solution.sol`](Solution.sol) for an actual implementation.

