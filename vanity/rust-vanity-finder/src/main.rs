@@ -1,9 +1,8 @@
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
-use hex::FromHex;
-use hex;
 use std::thread;
 use std::time::Instant;
+
 pub fn add1_to_bytes(input: & mut [u8; 132]) {
     let mut i = 1;
     loop{
@@ -16,16 +15,15 @@ pub fn add1_to_bytes(input: & mut [u8; 132]) {
             i+=1;
         }
     }
-
 }
-pub fn main(){
+
+pub fn main() {
     let threads: Vec<_> = (0..8)
         .map(|i: u8| {
             thread::spawn(move || {
                 let now = Instant::now();
                 let mut hasher = Sha256::new();
                 let mut output = [0u8; 32];
-
 
                 // these bytes correspond to the abi encoding of the selector, the magic hash, and a signature of less than 32 bytes
                 let mut input: [u8; 132] = [22, 38, 186, 126, //selector - 8 bytes
@@ -35,7 +33,7 @@ pub fn main(){
                 0, //signature.length
                 255/(i+1), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; //actual signature data, depends on i to starts our threads at different places
                 
-                let mut index = 0u64;
+                let mut index : usize = 0;
 
                 loop{    
                     add1_to_bytes(&mut input);
@@ -51,11 +49,9 @@ pub fn main(){
                         if output[3] == 126{
                             println!("{}", "FOUND 4 BYTES");
                             println!("{:?}", input);
-                            break
+                            break;
                         }
-                        
                     }
-        
                 }
             })
         })
