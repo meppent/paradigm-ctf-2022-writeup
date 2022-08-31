@@ -26,5 +26,5 @@ As we want the return data to start with `isValidSignature.selector = 0x1626ba7e
 To do this, we've written bruteforce algorithm in Rust, see [`./rust-vanity-finder`](rust-vanity-finder/). 
 Our algorithm is able to find a solution in less than 30 minutes (`--release`!) on a classic computer.
 A solution is `003f7f000000000000000000000000000000000000000000000000000051f1441a`.
-We now just have to inject this code using Yul - cf `solution.sol`.
+We now just have to inject this code using Yul. We can deploy the contract [Solution.sol](Solution.sol) that solves the challenge at the deployment.
 
