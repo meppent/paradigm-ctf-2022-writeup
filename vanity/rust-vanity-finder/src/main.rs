@@ -4,15 +4,15 @@ use std::thread;
 use std::time::Instant;
 
 pub fn add1_to_bytes(input: & mut [u8; 132]) {
-    let mut i = 1;
+    let mut i : usize = 1;
     loop{
         if input[input.len() - i] != 255 {
             input[input.len() - i] += 1;
             break;
         }
-        else{
+        else {
             input[input.len() - i] = 0;
-            i+=1;
+            i += 1;
         }
     }
 }
@@ -46,7 +46,7 @@ pub fn main() {
                         let elapsed_time = now.elapsed();
                         index += 1;
                         println!("Thread {} found {} times three correct starting bytes - {} seconds elapsed.", i, index, elapsed_time.as_secs());
-                        if output[3] == 126{
+                        if output[3] == 126 {
                             println!("{}", "FOUND 4 BYTES");
                             println!("{:?}", input);
                             break;
