@@ -53,7 +53,7 @@ PC
 EQ
 PUSH1 [line of the penultimate opcode of the block]
 JUMPI
-DUP1 // if we arrive here, then it is from the third block
+DUP1 // if we arrive here, then we are in the third block
 DUP1 // we duplicate 2 time what is on the stack
 PUSH1 0x00  // --   
 MSTORE      // 
