@@ -10,11 +10,11 @@ So, the bytecode or our contract will have a block of opcodes, that will be repe
 
 ```
 [block 1]: push the next bytes
-[block 2]: one third of the bytecode pushed
+[block 2]: one-third of the bytecode pushed
 [block 3]: duplicate and return the data
 ```
 
-We need to find a block of opcodes that will do what is written above in function if it is the first, the second or the third block. To simplify things, let's say that our final bytecode will have a size of 96 bytes, so we can `PUSH` one third of the bytecode with a `PUSH32`. Because the first block needs to push the next 32 bytes, our block needs to finish by a `PUSH32`. Also, because our block mustn't do the same thing if it is in first or third position, we need to add a condition: there will be a `JUMPI` in our block. The structure will then be the following:
+We need to find a block of opcodes that will do what is written above in function if it is the first, the second or the third block. To simplify things, let's say that our final bytecode will have a size of 96 bytes, so we can `PUSH` one-third of the bytecode with a `PUSH32`. Because the first block needs to push the next 32 bytes, our block needs to finish by a `PUSH32`. Also, because our block mustn't do the same thing if it is in first or third position, we need to add a condition: there will be a `JUMPI` in our block. The structure will then be the following:
 
 ```
 if not if first block:
@@ -165,4 +165,4 @@ PUSH32 // we will push the next 32 bytes, that are the block itself
 005f 7f PUSH32 0x00
  ```
 
- We at the line `001f` the `PUSH32` of one third of our bytecode (the second block). We can now deploy the contract [Solution.sol](Solution.sol) that solves the challenge at the deployment.
+ We see at the line `001f` the `PUSH32` of one-third of our bytecode (the second block). We can now deploy the contract [Solution.sol](Solution.sol) that solves the challenge at the deployment.
