@@ -53,14 +53,14 @@ PC
 EQ
 PUSH1 [line of the penultimate opcode of the block]
 JUMPI
-DUP1 // if we arrive here, then we are in the third block
-DUP1 // so we duplicate 2 time what is on the stack
-PUSH1 0x00 // we store the bytecode between 0x00 and 0x60 in memory in order to return it
-MSTORE 
-PUSH1 0x20
-MSTORE
-PUSH1 0x40
-MSTORE 
+DUP1 // if we arrive here, then it is from the third block
+DUP1 // we duplicate 2 time what is on the stack
+PUSH1 0x00  // --   
+MSTORE      // 
+PUSH1 0x20  // we store the bytecode in memory 
+MSTORE      // between 0x00 and 0x60 in order to return it
+PUSH1 0x40  // 
+MSTORE      // --
 PUSH1 0x60 // size of the bytecode
 PUSH1 0x00 // offset of the bytecode in memory
 RETURN
