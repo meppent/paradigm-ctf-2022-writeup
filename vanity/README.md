@@ -1,7 +1,7 @@
 # Vanity
 
 For this challenge, the idea is simple: be able to sign a message from an address having more than 16 zeros, or to send a transaction with such an account.
-It is not possible to do the latter, and it seems hard to do the former aswell.
+It is not possible to do the latter, and it seems hard to do the former as well.
 Indeed, the library used to handle signature is an old OpenZeppelin release, the only difference between the most recent one being the possibility to submit both 65 bytes and 64 bytes signatures. While this possibility allows signature malleability attacks, it doesn't seem possible to leverage that to solve the challenge as the signatures are only used once.
 So where is the bug?
 
@@ -24,7 +24,7 @@ So as we said, the ECDSA library seems working well. But this contract allows no
 Yes we can! On Ethereum, there are precompiled contracts at addresses between 0x01 and 0x09. We need to find the one able to return the data we want. While the contract *identity* at `0x04` seems to be an excellent candidate, it doesn't work. Indeed, the returned data must be of length 32 and `abi.encodeWithSelector(IERC1271.isValidSignature.selector, hash, signature)` is of length 4+32 = 36 at least even with an empty signature. So we can try with the contract *SHA2-256* at address 0x02. This contract returns exactly 32 bytes, the SHA2-256 of the input data.
 As we want the return data to start with `isValidSignature.selector = 0x1626ba7e`, we need to find a signature such as `SHA256(0x1626ba7e + hash(CHALLENGE_MAGIC) + signature)` begins with `0x1626ba7e`.
 
-To do this, we've written bruteforce algorithm in Rust, see [`./rust-vanity-finder`](rust-vanity-finder/). To run the script, you need to [install cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html), and then run the following command in the directory [`./rust-vanity-finder`](rust-vanity-finder/):
+To do this, we've written brute-force algorithm in Rust, see [`./rust-vanity-finder`](rust-vanity-finder/). To run the script, you need to [install cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html), and then run the following command in the directory [`./rust-vanity-finder`](rust-vanity-finder/):
 
 ```bash
 cargo run --release

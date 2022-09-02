@@ -36,7 +36,7 @@ For example, `A000c` (encoded `41000c`) is equivalent to `++++++++++++` (encoded
 
 ### Invalid opcodes
 
-If an invalid opcode is given in the input program (not in the opcodes and pseudo-opcodes listed above), it will be added as it in the output EVM bytecode, but it will be preceded by the two opcodes `dead` and succeded by the two opcodes `beef`, that are only invalid EVM opcodes.
+If an invalid opcode is given in the input program (not in the opcodes and pseudo-opcodes listed above), it will be added as it in the output EVM bytecode, but it will be preceded by the two opcodes `dead` and succeeded by the two opcodes `beef`, that are only invalid EVM opcodes.
 
 ## Presentation of some unexpected behaviors of the compiler
 
@@ -44,7 +44,7 @@ The compiler has a few unexpected behaviors (and the author apologizes for that 
 
 ### 1. Pseudo-opcodes don't escape the following characters
 
-The four pseudo-opcodes `R`, `L`, `A` and `S` read during the compilation the two following bytes to determine the number of repetitions. But these two bytes are considered as normal input opcodes during the pre-processing, especially during the loop detection. So, if for example there is in the input programe the opcodes `A005b` (encoded `41005b`) to add 91 to the last element on the stack, it will be interpreted as `A00[` (because `[` is encoded by `5b`) during the pre-processing. So, during the loop detection, it will consider that there is here the beginning of a new loop. It can make the transaction revert (it can happen if all the square brackets are not matched), or worse, add unexpected loops in the code.
+The four pseudo-opcodes `R`, `L`, `A` and `S` read during the compilation the two following bytes to determine the number of repetitions. But these two bytes are considered as normal input opcodes during the pre-processing, especially during the loop detection. So, if for example there is in the input program the opcodes `A005b` (encoded `41005b`) to add 91 to the last element on the stack, it will be interpreted as `A00[` (because `[` is encoded by `5b`) during the pre-processing. So, during the loop detection, it will consider that there is here the beginning of a new loop. It can make the transaction revert (it can happen if all the square brackets are not matched), or worse, add unexpected loops in the code.
 
 ### 2. The optimization pass doesn't replace the correct number of opcodes
 
@@ -52,11 +52,11 @@ To optimize duplicate input opcodes, the optimization pass replaces them with ps
 
 ### 3. Invalid opcodes can badly influence the output code
 
-In theory, the invalid input opcodes are not accessible by any means because they are surrounded by invalid EVM opcodes. Indeed, if the program counter should naturally arrive to the invalid input opcode, the transaction will revert because it is preceeded by invalid EVM opcodes. We also can't jump on them because it needs a `JUMPDEST` opcode, that is `5b`, the encoding of `[`, a valid input opcode. But, if we put a `PUSHN` opcode with $N > 2$, it will escape opcodes that are further. Indeed, the N bytes following a `PUSHN` are escaped, in the sense that they can't be executed as actual opcodes. So, any `PUSHN` with $N > 2$ in the input program can lead to unexpected behaviours.
+In theory, the invalid input opcodes are not accessible by any means because they are surrounded by invalid EVM opcodes. Indeed, if the program counter should naturally arrive to the invalid input opcode, the transaction will revert because it is preceded by invalid EVM opcodes. We also can't jump on them because it needs a `JUMPDEST` opcode, that is `5b`, the encoding of `[`, a valid input opcode. But, if we put a `PUSHN` opcode with $N > 2$, it will escape opcodes that are further. Indeed, the N bytes following a `PUSHN` are escaped, in the sense that they can't be executed as actual opcodes. So, any `PUSHN` with $N > 2$ in the input program can lead to unexpected behaviours.
 
 ### 4. There is no check that all the opened square brackets are closed
 
-An input program with opened square brackets that are not closed is accepted and will go through the pre-processing without any problem. It can revert during the compilation, but not necessarly. Indeed, if an unmatched square bracket is opened at the index `i` in the input program, `loop[i]` won't be affected, so it will have a null value. Thus, a `BasicBlock` will be created with the field `dst2` set to 1 (that is`loop[i] + 1`). If there is no block that begins at the index 1, the compilation will revert at the line 293:
+An input program with opened square brackets that are not closed is accepted and will go through the pre-processing without any problem. It can revert during the compilation, but not necessarily. Indeed, if an unmatched square bracket is opened at the index `i` in the input program, `loop[i]` won't be affected, so it will have a null value. Thus, a `BasicBlock` will be created with the field `dst2` set to 1 (that is`loop[i] + 1`). If there is no block that begins at the index 1, the compilation will revert at the line 293:
 
 ```solidity
 uint dst = basicBlockAddrs[labels[i].dstBlock];
@@ -77,7 +77,7 @@ But `ff` is never written in the EVM bytecode by valid input opcodes. There are 
 - Put it as it, it will be treated as an invalid opcode so surrounded by invalid opcodes, but it will be inaccessible.
 - It can be put in the 2 bytes following a pseudo-opcode `R`, `L`, `A` or `S`. Indeed, these pseudo-opcodes generate a `PUSH4` opcode followed with the two bytes we put after the pseudo-opcode.
 
-Since the first option seems to make the `ff` opcode inaccessible, we will explore the second option. For example, if in the input program there is `Aff00` (encoded `41ff00`), the compiler will add somewhere in the output EVM bytecode `63ff00` (`PUSH4 0xff00`). But here, the opcode `ff` is inside the scope of a `PUSH4`, so there is no way that it can be executed. We need to make this opcode executable. To do so, we can escape the `63` opcode (`PUSH4`) with another `PUSH` opcode placed before. We saw [before](#3-invalid-opcodes-can-badly-influence-the-output-code) how to do that: we can put a `PUSHN` opcode, with $N$ enough large, in the input program such that, even if it is surrouded by invalid opcodes, it can escape the `PUSH4` opcode before `ff00`. To determine the value of $N$, we need to know the exact bytecode created by the input program `Aff00`. We see in the code:
+Since the first option seems to make the `ff` opcode inaccessible, we will explore the second option. For example, if in the input program there is `Aff00` (encoded `41ff00`), the compiler will add somewhere in the output EVM bytecode `63ff00` (`PUSH4 0xff00`). But here, the opcode `ff` is inside the scope of a `PUSH4`, so there is no way that it can be executed. We need to make this opcode executable. To do so, we can escape the `63` opcode (`PUSH4`) with another `PUSH` opcode placed before. We saw [before](#3-invalid-opcodes-can-badly-influence-the-output-code) how to do that: we can put a `PUSHN` opcode, with $N$ enough large, in the input program such that, even if it is surrounded by invalid opcodes, it can escape the `PUSH4` opcode before `ff00`. To determine the value of $N$, we need to know the exact bytecode created by the input program `Aff00`. We see in the code:
 
 ```solidity
 } else if (op == "A") {
@@ -113,14 +113,14 @@ The deployed bytecode is:
 0x60006180005b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b8051630000002f576300000038565b5b5b6300000020565b00
 ```
 
-We let some space at the beginning to let us a margin for some adjustements in the second input program. This program does almost nothing, but compiles and runs finely. But after the first execution, some mappings are affected. In particular, we have:
+We let some space at the beginning to let us a margin for some adjustments in the second input program. This program does almost nothing, but compiles and runs finely. But after the first execution, some mappings are affected. In particular, we have:
 
 ```solidity
 loops[26] = 29 // `[` is matched to `]`
 basicBlockAddrs[30] = 56 // dst2 of the loop is the destination after the loop, here almost the end of the bytecode
 ```
 
-Then, we need to put an unmatched square bracket in the second input program. If `i` is the index of the square bracket in the input program, we need `basicBlockAddrs[loop[i] + 1]` to be not null. Because the square bracket is unmatched, `loop[29]` is not redefined, and if there is no block in the second execution that begins at the index 30, `basicBlockAddrs[30]` is not redefined aswell. Then we can take `i = 29`. Like that, if the loop condition is not met, the jump will point to the index 56. Because we also need to include the code `64A5bff`, our second input program will look like that:
+Then, we need to put an unmatched square bracket in the second input program. If `i` is the index of the square bracket in the input program, we need `basicBlockAddrs[loop[i] + 1]` to be not null. Because the square bracket is unmatched, `loop[29]` is not redefined, and if there is no block in the second execution that begins at the index 30, `basicBlockAddrs[30]` is not redefined as well. Then we can take `i = 29`. Like that, if the loop condition is not met, the jump will point to the index 56. Because we also need to include the code `64A5bff`, our second input program will look like this:
 
 ```
 #####[64A5bff]]##############[######
@@ -144,7 +144,7 @@ The encoded version of the second input program is:
 2c2d3c23235b64415bff5d5d23232323232323232323232323235b232323232323
 ```
 
-The second input program will depploy the following bytecode:
+The second input program will deploy the following bytecode:
 ```
 0x60006180005b5b5b5b5b5b5b8051630000001a57630000004a565bdead64beef8051615bff0181525b80516300000037576300000043565bdeadffbeef6300000028565b630000000b565b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b80516300000068576300000038565b5b5b5b5b5b5b5b00
 ```
