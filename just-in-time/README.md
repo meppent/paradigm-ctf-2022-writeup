@@ -4,7 +4,7 @@
 
 This challenge implements a [just-in-time](https://en.wikipedia.org/wiki/Just-in-time_compilation) compiler written in Solidity. The contract `JIT` has a function `invoke` that takes two argument, `_program` and `stdin`, of type `bytes`. The first one is the input program written with custom opcodes that we will describe later, that will be translated to EVM opcodes during the compilation. After the compilation, the function deploys a contract with the bytecode obtained by the compilation and makes a `delegatecall` to the deployed contract with `_stdin` as input data.
 
-The objective of the challenge is to steal 50 eth given to the contract `JIT` at the beginning.
+The objective of the challenge is to steal 50eth given to the contract `JIT` at the beginning.
 
 ## Compiler description
 
@@ -40,11 +40,11 @@ If an invalid opcode is given in the input program (not in the opcodes and pseud
 
 ## Presentation of some unexpected behaviors of the compiler
 
-The compiler presents some unexpected behaviors (and the author apologizes for this in the comments of the contract). We list here all the ones we found, but not all of them will be used in our solution.
+The compiler has a few unexpected behaviors (and the author apologizes for that in the comments on the contract). We list here all those we have found, but not all of them will be used in our solution.
 
 ### 1. Pseudo-opcodes don't escape the following characters
 
-The four pseudo-opcodes `R`, `L`, `A` and `S` read during the compilation the two following bytes to determine the number of repetitions. But these two bytes are considered as normal input opcodes during the pre-processing, especially during the loop detection. So, if for example there is in the input programe the opcodes `A005b` (encoded `41005b`) to add 91 to the last element on the stack, it will be interpreted as `A00[` (because `[` is encoded by `5b`) during the pre-processing. So, during the loop detection, it will consider that there is here the begining of a new loop. It can make the transaction revert (it can happen if all the square brackets are not matched), or worse, add unexpected loops in the code.
+The four pseudo-opcodes `R`, `L`, `A` and `S` read during the compilation the two following bytes to determine the number of repetitions. But these two bytes are considered as normal input opcodes during the pre-processing, especially during the loop detection. So, if for example there is in the input programe the opcodes `A005b` (encoded `41005b`) to add 91 to the last element on the stack, it will be interpreted as `A00[` (because `[` is encoded by `5b`) during the pre-processing. So, during the loop detection, it will consider that there is here the beginning of a new loop. It can make the transaction revert (it can happen if all the square brackets are not matched), or worse, add unexpected loops in the code.
 
 ### 2. The optimization pass doesn't replace the correct number of opcodes
 
@@ -63,7 +63,7 @@ uint dst = basicBlockAddrs[labels[i].dstBlock];
 if (dst == 0) revert("invalid code");
 ```
 
-But if there is a block that begins at the index 1, `basicBlockAddrs[1]` won't be null, and the loop begining at the unmatched `[` will jump to the same line as after the first block if the condition to enter the loop is not met.
+But if there is a block that begins at the index 1, `basicBlockAddrs[1]` won't be null, and the loop beginning at the unmatched `[` will jump to the same line as after the first block if the condition to enter the loop is not met.
 
 ### 5. Not all the storage variables are cleaned after an execution
 
@@ -71,7 +71,7 @@ Almost all the storage variables are cleaned when they are no more used, in orde
 
 ## Building the solution
 
-Since the contract makes a `delegatecall` to the deployed contract, the objective is just to make the function `invoke` deploy a contract that sends its funds to someone. But here's a problem: there is no input opcode that permits to make a `call`, the common way to send ethers to someone. Even worse, we don't interact freely with the stack, that has almost all the time a depth of 2. The opcode `CALL` needs 7 elements on the stack, so it seems impossible to make a `call`. But there is another opcode that transfers ethers: the opcode `SELFDESTRUCT` (`ff`). The advantages of this opcode are that it requires only one element on the stack, and that it transfers all the funds the contract has, there is no need to specify the amount. So, our objective will be to make the compiler put the byte `ff` in the EVM bytecode, and to make this opcode accessible in a execution.
+Since the contract makes a `delegatecall` to the deployed contract, the objective is solely to make the function `invoke` deploy a contract that sends its funds to someone. But here's a problem: no input opcode lets you make a `call`, the common way to send ethers to someone. Even worse, we don't interact freely with the stack, that maintains almost all the time a depth of 2. The opcode `CALL` needs 7 elements on the stack, so it seems impossible to make a `call`. But there is another opcode that transfers ethers: the opcode `SELFDESTRUCT` (`ff`). The advantages of this opcode are it requires only one element on the stack, and it transfers all the funds the contract has, there is no need to specify the amount. Therefore, our objective will be to make the compiler put the byte `ff` in the EVM bytecode, and to make this opcode accessible in an execution.
 
 But `ff` is never written in the EVM bytecode by valid input opcodes. There are only two ways to make the compiler write an opcode of our choice in the output EVM bytecode:
 - Put it as it, it will be treated as an invalid opcode so surrounded by invalid opcodes, but it will be inaccessible.
@@ -113,7 +113,7 @@ The deployed bytecode is:
 0x60006180005b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b8051630000002f576300000038565b5b5b6300000020565b00
 ```
 
-We let some space at the begining to let us a margin for some adjustements in the second input program. This program does almost nothing, but compiles and runs finely. But after the first execution, some mappings are affected. In particular, we have:
+We let some space at the beginning to let us a margin for some adjustements in the second input program. This program does almost nothing, but compiles and runs finely. But after the first execution, some mappings are affected. In particular, we have:
 
 ```solidity
 loops[26] = 29 // `[` is matched to `]`
@@ -126,13 +126,13 @@ Then, we need to put an unmatched square bracket in the second input program. If
 #####[64A5bff]]##############[######
 ```
 
-Note that the last `[` opcode is at the same index as the same opcode in the first input program. We put our code `64A5bff` in a loop in order to escape this sequence: if we do not affect the memory, we will never enter in any loop. We took care of closing all the opened square bracket except the last one. Note that we had to add another `]` because as explained [here](#1-pseudo-opcodes-dont-escape-the-following-characters), the byte `5b` will be considered as the begining of a loop even if it is after the pseudo-opcode `A`. If we try to compile this input program, we obtain the following EVM bytecode:
+Note that the last `[` opcode is at the same index as the same opcode in the first input program. We put our code `64A5bff` in a loop in order to escape this sequence: if we do not affect the memory, we will never enter in any loop. We took care of closing all the opened square bracket except the last one. Note that we had to add another `]` because as explained [here](#1-pseudo-opcodes-dont-escape-the-following-characters), the byte `5b` will be considered as the beginning of a loop even if it is after the pseudo-opcode `A`. If we try to compile this input program, we obtain the following EVM bytecode:
 
 ```
 0x60006180005b5b5b5b5b5b5b8051630000001a57630000004a565bdead64beef8051615bff0181525b80516300000037576300000043565bdeadffbeef6300000028565b630000000b565b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b80516300000068576300000038565b5b5b5b5b5b5b5b00
 ```
 
-We see that the opcode on which we would like to jump (a `5b` (`JUMPDEST`) before a `ff` (`SELFDESTRUCT`)) is at the index 35. But we want it to be at the index 56, because it is where our modified `JUMP` goes. We can replace some `#` opcodes at the begining by others input opcodes in order to add more bytecode at the begining, and to shift the index of the `JUMPDEST` to the right. The only restriction on the input opcodes is that we can't use those that affect the memory (because we need it to be untouched to avoid entering the loops). With some tries or computations, we find that the following input program puts the `JUMPDEST` at the index 56 and works fine:
+We see that the opcode on which we would like to jump (a `5b` (`JUMPDEST`) before a `ff` (`SELFDESTRUCT`)) is at the index 35. But we want it to be at the index 56, because it is where our modified `JUMP` goes. We can replace some `#` opcodes at the beginning by others input opcodes in order to add more bytecode at the beginning, and to shift the index of the `JUMPDEST` to the right. The only restriction on the input opcodes is that we can't use those that affect the memory (because we need it to be untouched to avoid entering the loops). With some tries or computations, we find that the following input program puts the `JUMPDEST` at the index 56 and works fine:
 
 ```
 ,-<##[64A5bff]]##############[######
