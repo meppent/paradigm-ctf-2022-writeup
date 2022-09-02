@@ -2,9 +2,9 @@
 
 ## Explanation of the challenge
 
-This challenge implements a [just-in-time](https://en.wikipedia.org/wiki/Just-in-time_compilation) compiler written in Solidity. The contract `JIT` has a function `invoke` that takes two argument, `_program` and `stdin`, of type `bytes`. The first one is the input program written with custom opcodes that we will describe later, that will be translated to EVM opcodes during the compilation. After the compilation, the function deploys a contract with the bytecode obtained by the compilation, and makes a `delegatecall` to the deployed contract with `_stdin` as input data.
+This challenge implements a [just-in-time](https://en.wikipedia.org/wiki/Just-in-time_compilation) compiler written in Solidity. The contract `JIT` has a function `invoke` that takes two argument, `_program` and `stdin`, of type `bytes`. The first one is the input program written with custom opcodes that we will describe later, that will be translated to EVM opcodes during the compilation. After the compilation, the function deploys a contract with the bytecode obtained by the compilation and makes a `delegatecall` to the deployed contract with `_stdin` as input data.
 
-The objective of the challenge is to steal 50eth given to the contract `JIT` at the begining.
+The objective of the challenge is to steal 50 eth given to the contract `JIT` at the beginning.
 
 ## Compiler description
 
