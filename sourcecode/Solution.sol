@@ -14,6 +14,8 @@ contract Solution {
     constructor(ISetup setup) {
         IChallenge challenge = setup.challenge();
 
-        challenge.solve(hex"");
+        challenge.solve(
+            hex"60025814601e57808060005260205260405260606000f3000000000000005b7f60025814601e57808060005260205260405260606000f3000000000000005b7f60025814601e57808060005260205260405260606000f3000000000000005b7f"
+        );
     }
 }
